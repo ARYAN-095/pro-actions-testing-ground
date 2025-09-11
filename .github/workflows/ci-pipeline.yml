@@ -1,6 +1,6 @@
 name: Continuous Integration Pipeline
 
-on:
+"on":
   push: # This runs automatically on push
     branches:
       - develop
