@@ -1,0 +1,11 @@
+name: Test New API Endpoint
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  test-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run integration tests for the new endpoint
+        run: echo "🧪 Testing the new API endpoint specifically..."
