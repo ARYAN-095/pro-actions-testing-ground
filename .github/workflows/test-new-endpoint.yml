@@ -1,0 +1,10 @@
+name: Test New API Endpoint
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This is a placeholder. The real endpoint tests run on the feature branch."

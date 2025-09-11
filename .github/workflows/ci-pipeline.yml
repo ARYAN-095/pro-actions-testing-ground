@@ -1,0 +1,10 @@
+name: Continuous Integration Pipeline
+
+"on":
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This is a placeholder. The real CI pipeline runs on the 'develop' branch."
