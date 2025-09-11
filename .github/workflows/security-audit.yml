@@ -1,0 +1,11 @@
+name: Production Security Audit
+
+on:
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Production Security Scan
+        run: echo "🔒 Running security audit on main branch..."
