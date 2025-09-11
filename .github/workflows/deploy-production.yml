@@ -1,0 +1,11 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Production Servers
+        run: echo "🚀 Deploying latest version to production..."
