@@ -1,0 +1,11 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Staging Environment
+        run: echo "🛠️ Deploying to staging from develop branch..."
