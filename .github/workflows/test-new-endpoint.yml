@@ -1,6 +1,6 @@
 name: Test New API Endpoint
 
-on:
+"on":
   workflow_dispatch: # Manual trigger only
 
 jobs:
