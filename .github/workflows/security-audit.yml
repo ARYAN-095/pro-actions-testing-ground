@@ -1,12 +1,287 @@
-name: Production Security Audit
+name: Run Tests
+run-name: "#${{ github.run_number }} ${{ inputs.branch }} | ${{ inputs.env_name || inputs.custom_env_name }} | LM ${{ inputs.lm_version }}"
 
 "on":
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run tests on'
+        required: true
+        default: 'main'
+        type: string
+      env_name:
+        description: 'Tox environment name to run'
+        required: true
+        type: choice
+        options:
+          - wip
+          - regression
+          - performance
+          - stress
+          - system
+          - sanity-patch
+          - sanity-iso
+          - security
+          - qualys
+          - nessus
+          - kvm
+          - kvm-patch
+          - avaya
+          - avaya-patch
+          - xen
+          - xen-patch
+          - azure
+          - azure-patch
+          - aws
+          - aws-patch
+          - aws-marketplace-prepare
+          - govcloud
+          - govcloud-patch
+          - govcloud-publish
+          - hyperv
+          - hyperv-patch
+          - vsphere
+          - vsphere-patch
+          - centurylink
+          - virtualbox
+          - virtualbox-patch
+          - templates
+          - env
+          - pester
+          - scheduling
+          - l7l4regression
+          - l4l7checktype
+          - http2regresssion
+          - esptestsuite
+          - espsamltestsuite
+          - waftestsuite
+          - certificate-regression
+          - basicauth_espwithwaftestsuite
+          - formauth_espwithwaftestsuite
+          - contentruletestsuite
+          - localcertsuit
+          - cachemgmtsuit
+          - usermgmttestsuit
+          - l7-test
+          - udp-test
+          - api-test
+          - ipv6-test
+          - workflow-test
+          - os-test
+          - rs-test
+          - ssl-test
+          - ha-test
+          - healthcheck-test
+          - qualys_scans
+          - gencheck_verification
+          - artifacts
+          - mt_release_test
+          - lm_kemp360_integration
+          - esp_sachin
+          - ldap_sachin
+          - sso_imageset
+          - ecs_deploy
+          - lm_live_migration
+          - lm_release_task
+          - lm_addon_validation
+          - lm_template_validation
+          - lm_geol7_http_checker
+          - lm_geol7_https_checker
+          - lm_abhishek
+          - lm_custom
+          - lm_lets_encrypt_certificate
+          - azure_ha
+          - snmp_validation
+          - lm_qos_limiting
+          - res_code_mapping
+          - lm_digicert_nwc
+          - lm_auto_install_addons
+          - lm_auto_install_addons_upgrade
+          - lm_persistence_with_failover
+          - ha_configuration
+          - lm_backup_and_restore
+          - unit
+          - dry-run
+          - steps
+          - tags
+          - self
+          - cucumber
+          - testplan
+          - layer4_ftp
+        default: ''
+      custom_env_name:
+        description: 'Custom environment name (optional - use if not in dropdown)'
+        required: false
+        type: string
+      extra_args:
+        description: 'Extra arguments to pass to tox (optional)'
+        required: false
+        type: string
+      lm_version:
+        description: 'LoadMaster version to use for testing'
+        required: true
+        type: choice
+        options:
+          - LoadMaster-VLM-7.2.62.0.22915
+          - LoadMaster-VLM-7.2.61.0.22763
+        default: ''
 
 jobs:
-  audit:
-    runs-on: ubuntu-latest
+  run-tests:
+    runs-on: loadmaster
+    
     steps:
-      - name: Run Production Security Scan
-        run: echo "🔒 Running security audit on main branch..."
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
+    
+    - name: Determine environment name
+      id: env_name
+      run: |
+        if [ -n "${{ inputs.custom_env_name }}" ]; then
+          echo "env_name=${{ inputs.custom_env_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "env_name=${{ inputs.env_name }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Setup test environment
+      uses: ./.github/actions/setup-test-environment
+      with:
+        test_env: ${{ steps.env_name.outputs.env_name }}
+    
+    - name: Setup Terraform and govc configuration
+      run: |
+        # Validate tool installations (no configuration needed - handled by application)
+        echo "Checking Terraform installation..."
+        terraform --version
+        
+        echo "Checking govc installation..."
+        govc version
+        
+        echo "Tools are ready - configuration handled by govc_manager.py via govc_setup.sh"
+    
+    - name: "Create .version file"
+      run: |
+        # Extract version from LoadMaster image name (e.g., LoadMaster-VLM-7.2.62.0.22915 -> 7.2.62.0.22915.RELEASE)
+        LM_VERSION_INPUT="${{ inputs.lm_version }}"
+        VERSION=$(echo "$LM_VERSION_INPUT" | sed 's/LoadMaster-VLM-//' | sed 's/$/.RELEASE/')
+        echo "Creating .version file with version: $VERSION"
+        echo -n "$VERSION" > data/.version
+
+    - name: Install necessary utilities and run ifconfig
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y net-tools
+        ifconfig
+
+    - name: Run tests
+      run: |
+        EXTRA_ARGS="${{ inputs.extra_args }}"
+        
+        # Use pipefail to ensure we get the exit code from tox, not from tee
+        set -o pipefail
+        
+        if [ -n "$EXTRA_ARGS" ]; then
+          poetry run tox -e ${{ steps.env_name.outputs.env_name }} -- $EXTRA_ARGS 2>&1 | tee run-tests.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+        else
+          poetry run tox -e ${{ steps.env_name.outputs.env_name }} 2>&1 | tee run-tests.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+        fi
+        
+        # Store the exit code for later steps
+        echo "TEST_EXIT_CODE=$TEST_EXIT_CODE" >> $GITHUB_ENV
+        
+        # Add test result summary to log
+        echo "" >> run-tests.log
+        echo "========================================" >> run-tests.log
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "TEST RESULT: SUCCESS (Exit Code: $TEST_EXIT_CODE)" >> run-tests.log
+        else
+          echo "TEST RESULT: FAILED (Exit Code: $TEST_EXIT_CODE)" >> run-tests.log
+        fi
+        echo "========================================" >> run-tests.log
+        
+        # Exit with the original tox exit code to fail the job if tests failed
+        exit $TEST_EXIT_CODE
+      env:
+        # Pass through common environment variables that tests might need
+        PYTHONPATH: ${{ github.workspace }}
+        # Add other environment variables your tests might need
+        BUILD_PATH: ${{ github.workspace }}
+        LM_VERSION: ${{ inputs.lm_version }}
+        LM_BRANCH: "QA"
+        BUILD_NUMBER: ${{ github.run_number }}
+        TYPE: "github-actions"
+        SKIP_PATCHING: "true"
+        # LoadMaster build artifact paths - GitHub Actions runner should have access to NFS
+        LM_BUILD_PATH: ${{ github.workspace }}
+        artifact_path: "/var/lib/jenkins/nfs"
+        # Terraform configuration
+        TF_IN_AUTOMATION: "true"
+        TF_INPUT: "false"
+        TF_CLI_ARGS: "-no-color"
+        # govc configuration (these should be set as repository secrets)
+        GOVC_URL: ${{ secrets.GOVC_URL }}
+        GOVC_USERNAME: ${{ secrets.GOVC_USERNAME }}
+        GOVC_PASSWORD: ${{ secrets.GOVC_PASSWORD }}
+        GOVC_INSECURE: ${{ secrets.GOVC_INSECURE }}
+        GOVC_DATACENTER: ${{ secrets.GOVC_DATACENTER }}
+        GOVC_DATASTORE: ${{ secrets.GOVC_DATASTORE }}
+        GOVC_NETWORK: ${{ secrets.GOVC_NETWORK }}
+        GOVC_RESOURCE_POOL: ${{ secrets.GOVC_RESOURCE_POOL }}
+    
+    - name: Collect all logs into single file
+      if: always()
+      run: |
+        # Create comprehensive test log file
+        echo "========================================" > complete-test-log.txt
+        echo "COMPREHENSIVE TEST EXECUTION LOG" >> complete-test-log.txt
+        echo "========================================" >> complete-test-log.txt
+        echo "Branch: ${{ inputs.branch }}" >> complete-test-log.txt
+        echo "Environment: ${{ steps.env_name.outputs.env_name }}" >> complete-test-log.txt
+        echo "LM Version: ${{ inputs.lm_version }}" >> complete-test-log.txt
+        echo "Build Number: ${{ github.run_number }}" >> complete-test-log.txt
+        echo "Extra Args: ${{ inputs.extra_args }}" >> complete-test-log.txt
+        echo "Timestamp: $(date)" >> complete-test-log.txt
+        echo "Runner: $(hostname)" >> complete-test-log.txt
+        echo "Python Version: $(python --version 2>&1)" >> complete-test-log.txt
+        echo "Tox Version: $(poetry run tox --version 2>&1)" >> complete-test-log.txt
+        
+        # Add test result status
+        if [ -n "$TEST_EXIT_CODE" ]; then
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "Test Result: SUCCESS" >> complete-test-log.txt
+          else
+            echo "Test Result: FAILED (Exit Code: $TEST_EXIT_CODE)" >> complete-test-log.txt
+          fi
+        else
+          echo "Test Result: UNKNOWN (Exit code not captured)" >> complete-test-log.txt
+        fi
+        echo "" >> complete-test-log.txt
+        
+        # Main test execution log
+        echo "========================================" >> complete-test-log.txt
+        echo "MAIN TEST EXECUTION LOG" >> complete-test-log.txt
+        echo "========================================" >> complete-test-log.txt
+        if [ -f "run-tests.log" ]; then
+          cat run-tests.log >> complete-test-log.txt
+        else
+          echo "No main test log found" >> complete-test-log.txt
+        fi
+        echo "" >> complete-test-log.txt
+        
+        echo "========================================" >> complete-test-log.txt
+        echo "END OF COMPREHENSIVE TEST LOG" >> complete-test-log.txt
+        echo "========================================" >> complete-test-log.txt
+    
+    - name: Upload complete test log
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ${{ steps.env_name.outputs.env_name }}
+        path: complete-test-log.txt
+        retention-days: 30
+
 
