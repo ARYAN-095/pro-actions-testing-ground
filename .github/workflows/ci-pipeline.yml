@@ -1,10 +1,59 @@
-name: Continuous Integration Pipeline
+name: LM Regression Tests
+run-name: "#${{ github.run_number }} ${{ inputs.branch }} | Regression Suite | LM ${{ inputs.lm_version }}"
 
 "on":
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run tests on'
+        required: true
+        default: 'main'
+        type: string
+      lm_version:
+        description: 'LoadMaster version to use for testing'
+        required: true
+        type: choice
+        options:
+          - LoadMaster-VLM-7.2.62.0.22915
+          - LoadMaster-VLM-7.2.61.0.22763
+        default: ''
+      test_suites:
+        description: 'Comma-separated list of test environments to run (e.g., lm_backup_and_restore,ha_configuration)'
+        required: true
+        default: ''
+        type: string
+      extra_args:
+        description: 'Extra arguments to pass to tox (optional)'
+        required: false
+        type: string
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  BUILD_PATH: ${{ github.workspace }}
+  LM_VERSION: ${{ inputs.lm_version }}
+  BUILD_NUMBER: ${{ github.run_number }}
+  TYPE: "github-actions"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_CLI_ARGS: "-no-color"
+  GOVC_URL: ${{ secrets.GOVC_URL }}
+  GOVC_USERNAME: ${{ secrets.GOVC_USERNAME }}
+  GOVC_PASSWORD: ${{ secrets.GOVC_PASSWORD }}
+  GOVC_INSECURE: ${{ secrets.GOVC_INSECURE }}
+  GOVC_DATACENTER: ${{ secrets.GOVC_DATACENTER }}
+  GOVC_DATASTORE: ${{ secrets.GOVC_DATASTORE }}
+  GOVC_NETWORK: ${{ secrets.GOVC_NETWORK }}
+  GOVC_RESOURCE_POOL: ${{ secrets.GOVC_RESOURCE_POOL }}
+
 
 jobs:
   placeholder:
     runs-on: ubuntu-latest
     steps:
       - run: echo "This is a placeholder. The real CI pipeline runs on the 'develop' branch."
+  
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "This is a placeholder. The real staging deployment runs from the 'develop' branch."
+   
