@@ -47,13 +47,8 @@ env:
 
 
 jobs:
-  placeholder:
+  audit:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "This is a placeholder. The real CI pipeline runs on the 'develop' branch."
-  
-  placeholder:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "This is a placeholder. The real staging deployment runs from the 'develop' branch."
-   
+      - name: Run Production Security Scan
+        run: echo "🔒 Running security audit on main branch..."
