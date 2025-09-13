@@ -128,7 +128,7 @@ run-name: "#${{ github.run_number }} ${{ inputs.branch }} | ${{ inputs.env_name 
 
 jobs:
   run-tests:
-    runs-on: loadmaster
+    runs-on: abc
     
     steps:
     - name: Checkout code
@@ -283,5 +283,6 @@ jobs:
         name: ${{ steps.env_name.outputs.env_name }}
         path: complete-test-log.txt
         retention-days: 30
+
 
 
