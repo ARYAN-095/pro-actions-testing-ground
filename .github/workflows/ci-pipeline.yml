@@ -1,7 +1,7 @@
 name: LM Regression Tests
 run-name: "#${{ github.run_number }} ${{ inputs.branch }} | Regression Suite | LM ${{ inputs.lm_version }}"
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       branch:
