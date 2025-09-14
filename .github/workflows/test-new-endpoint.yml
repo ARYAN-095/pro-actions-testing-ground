@@ -1,7 +1,7 @@
 name: Run Multiple Test Environments
 run-name: "#${{ github.run_number }} ${{ inputs.branch }} | Multi-Tests | ${{ inputs.environments }} | LM ${{ inputs.lm_version }}"
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       branch:
