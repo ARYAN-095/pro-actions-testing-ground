@@ -1,7 +1,7 @@
 name: Run Tests
 run-name: "#${{ github.run_number }} ${{ inputs.branch }} | ${{ inputs.env_name || inputs.custom_env_name }} | LM ${{ inputs.lm_version }}"
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       branch:
@@ -132,6 +132,7 @@ jobs:
     steps:
       - name: Run Production Security Scan
         run: echo "🔒 Running security audit on main branch..."
+
 
 
 
